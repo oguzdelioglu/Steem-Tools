@@ -1,0 +1,349 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<title id="info"></title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+<meta name="mytable" content="" />
+<script type="text/javascript" src="https://code.jquery.com/jquery-3.2.1.min.js"></script> 
+<script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/jquery.tablesorter/2.29.2/js/jquery.tablesorter.js"></script> 
+<script type="application/x-javascript">
+addEventListener("load", function() {
+setTimeout(hideURLbar, 0); 
+}, false); 
+function hideURLbar(){
+window.scrollTo(0,1); 
+}
+</script>
+
+<!-- CSS --> 
+<link href="css/font-awesome.css" rel="stylesheet"><!-- Font-awesome-CSS --> 
+<link href="css/style.css" rel='stylesheet' type='text/css'/><!-- style.css --> 
+<!-- //CSS --> 
+<!-- Fonts --> 
+<link href="//fonts.googleapis.com/css?family=Josefin+Sans:100,100i,300,300i,400,400i,600,600i,700,700i&amp;subset=latin-ext" rel="stylesheet">
+<link href="//fonts.googleapis.com/css?family=Oswald:200,300,400,500,600,700&amp;subset=cyrillic,latin-ext,vietnamese" rel="stylesheet">
+<!-- Fonts --> 
+</head>
+
+<nav class="horizontal-nav full-width horizontalNav-notprocessed">
+  <ul>
+    <li><a onclick="GetInfo();">General Informations</a></li>
+	<li><a onclick="PPayouts();">Pending Payouts</a></li>
+	<li><a onclick="FFFollowers();">Follow From Followers</a></li>
+	<li><a onclick="(window.location='index.html');">Change User</a></li>
+  </ul>
+</nav>
+<div id="particles-js"></div>
+<div class="main-odl">
+	<h1 id="desc"></h1>
+	<div class="odl-newsletter">
+		<table  id="mytable" align="center">
+		<thead>
+		    <tr style="background: #191919;">
+				
+		    </tr>
+		</thead>
+		<tbody>
+		</tbody>
+		</table>
+		<div id="totalvalue"></div>
+	</div>
+<br/>
+</div>
+<!-- Js-Files --> 
+	<script src="js/particles.js"></script>
+	<script src="js/app.js"></script>
+<!-- //Js-Files --> 
+<script>
+	var name = "";
+	var pendinglist = [];
+	var YourFollowers = [];
+	var FollowersOfYou = [];
+	var FollowList = [];
+	var Informations = [];
+	var totalfollowers = 0;
+	$(document).ready(function(){
+		var res = window.location.pathname.split("/");
+		name = res[2].replace('@','');
+		var info = document.getElementById('info');
+		var desc = document.getElementById('desc');
+		info.innerHTML = name + " Informations";
+		desc.innerHTML = name + " Informations";
+		GetInfo();
+	});
+	
+	function GetInfo()
+	{
+		deletetable();
+		createtableinfo();
+		setTimeout(function(){
+			$.getJSON('https://api.steemjs.com/get_accounts?names[]=["' + name +'"]', function(result){
+			console.log(result);
+			var lvl = result[0]["reputation"];
+			lvl = Math.log10(lvl);
+			lvl = lvl - 9;
+			lvl = (lvl*9) + 25;
+			lvl = parseFloat(lvl).toFixed(2);
+			var id = result[0]["id"];
+			var balance = result[0]["balance"];
+			var sbd_balance = result[0]["sbd_balance"];
+			var created = result[0]["created"];
+			var post_count = result[0]["post_count"];
+			var tablo = document.getElementById('mytable');
+			var tr = document.createElement('tr');
+			tr.innerHTML = '<tr>'+
+			'<td class="lalign">' + id + '</td>'+
+			'<td>' + balance + '</td>'+
+			'<td>' + sbd_balance + '</td>'+
+			'<td>' + created + '</td>'+
+			'<td>' + post_count + '</td>'+
+			'<td>' + lvl + '</td>'+
+			'</tr>';
+			tablo.appendChild(tr);
+		});
+		}, 100);
+	}
+	function PPayouts()
+	{
+		pendinglist.splice(0);
+		$("#totalvalue").html("");
+		deletetable();
+		createtablepayout();
+		PendingPayouts(function(){AddTablePendingPayouts();});
+		$('#mytable').tablesorter();
+	}
+	
+	function FFFollowers()
+	{
+		YourFollowers.splice(0);
+		FollowersOfYou.splice(0);
+		FollowList.splice(0);
+		$("#totalvalue").html("");
+		deletetable();
+		createtablefollow();
+		GetYourFollowers(function(){});GetFollowersOfYou(function(){StartFollowList();});
+		$('#mytable').tablesorter();
+	}
+	
+	function AddTableFollowList() {
+		setTimeout(function(){
+				var followername;
+				for (var i = 0; i < FollowList.length; i++) {
+						var tablo = document.getElementById('mytable');
+						var tr = document.createElement('tr');
+						followername = "https://www.steemit.com/@" + FollowList[i]["follower"];
+						tr.innerHTML = '<tr>'+
+						'<td class="lalign"><a target="_BLANK" href="' + followername + '"/>@' + FollowList[i]["follower"] + '</td>'+
+						'</tr>';
+						tablo.appendChild(tr);
+				}
+				var el = document.getElementById('totalvalue');
+				el.innerHTML = '<center style="background: #000;"><h3 style="color: #fff;">Total User: ' + FollowList.length; + '</h3></center>';
+		}, 5000);
+	}
+	
+	
+	function StartFollowList() {
+		setTimeout(function(){
+			Array.prototype.diff = function (a) {
+				return this.filter(function (i) {
+					return a.indexOf(i) === -1;
+				});
+			};
+			FollowList = FollowersOfYou.diff(YourFollowers);
+			AddTableFollowList();
+			//console.log(FollowList);
+		}, 5000);
+	}
+	
+	
+	function GetYourFollowers(callback) {
+				var alphabet = "abcdefghijklmnoprstuvyzxwq".split("");
+				$.each(alphabet, function(letter) {
+					 $.getJSON('https://api.steemjs.com/get_following?follower='+ name + '&followType=blog&startFollowing=' + alphabet[letter] +'&limit=100', function(result){
+						$.each(result, function(i, field){
+							if(findObjectByKey(YourFollowers,"following",field['following'])==false)
+							{
+								YourFollowers.push({
+									follower: field['following']
+								});
+								totalfollowers++;
+							}
+						});
+					});
+				});
+				callback(YourFollowers);
+	}
+	
+	function GetFollowersOfYou(callback) {
+				var alphabet = "abcdefghijklmnoprstuvyzxwq".split("");
+				$.each(alphabet, function(letter) {
+					 $.getJSON('https://api.steemjs.com/get_followers?following='+ name + '&followType=blog&startFollower=' + alphabet[letter] +'&limit=100', function(result){
+						$.each(result, function(i, field){
+							if(findObjectByKey(FollowersOfYou,"follower",field['follower'])==false)
+							{
+								FollowersOfYou.push({
+									follower: field['follower']
+								});
+								totalfollowers++;
+							}
+						});
+					});
+				});
+				callback(FollowersOfYou);
+	}
+	
+	function PendingPayouts(callback) {
+			 $.getJSON('https://api.steemjs.com/get_discussions_by_blog?query={"tag":"' + name + '","limit":"100"}', function(result){
+				$.each(result, function(i, field){
+					if(!(field['pending_payout_value']=="0.000 SBD")& !(field['pending_payout_value']=="0.000 STEEM"))
+					pendinglist.push({
+						title: field['title'], 
+						author: field['author'], 
+						permlink:  field['permlink'],
+						pending:  field['pending_payout_value'],
+						parent:  field['parent_permlink']
+					});
+				});
+			});
+			callback(pendinglist);
+	}
+
+	
+	
+	function AddTablePendingPayouts() {
+		setTimeout(function(){
+				var author;
+				var post_link;
+				var author_link;
+				var post_title;
+				var price;
+				var parent_permlink;
+				var each_pay;
+				var total_price = 0;
+				for (var i = 0; i < pendinglist.length; i++) {
+						var tablo = document.getElementById('mytable');
+						var tr = document.createElement('tr');
+						author = pendinglist[i]["author"];
+						post_link = "https://www.steemit.com/@" + author + "/" + pendinglist[i]["permlink"];
+						author_link = "https://www.steemit.com/@" +author;
+						post_title =  pendinglist[i]["title"];
+						post_title = (post_title.length > 60)? post_title.substring(0,60) + '...' : post_title;
+						price =  pendinglist[i]["pending"].replace(' SBD','');
+						parent_permlink =  pendinglist[i]["parent"];
+							  //Adjustment For 75% Returns for Authors
+						if (name == author){
+							if (parent_permlink == 'utopian-io')
+							{
+							each_pay  = (price  * 0.75) - (price * 0.1125);
+							total_price = total_price + each_pay;
+							}
+							else {
+							each_pay  = price  * 0.75;
+							total_price = total_price + each_pay;
+							}
+							each_pay  = each_pay + ' SBD';
+						}
+						else 
+						{
+							each_pay = price  * 0.25;
+							each_pay = '<' + each_pay + ' SP';
+						}
+						tr.innerHTML = '<tr>'+
+						'<td class="lalign"><a target="_BLANK" href="' + author_link + '"/>@' + author + '</td>'+
+						'<td>' + parent_permlink + '</td>'+
+						'<td><a target="_BLANK" href="' + post_link +'"/>' + post_title + '</td>'+
+						'<td>' + price + '</td>'+
+						'<td>' + each_pay + '</td>'+
+						'</tr>';
+						tablo.appendChild(tr);
+				}
+				var el = document.getElementById('totalvalue');
+				el.innerHTML = '<center style="background: #000;"><h3 style="color: #fff;">Total Payout: ' + parseFloat(total_price).toFixed(2); + ' SBD</h3></center>';
+		}, 5000);
+	}
+		
+	function getusername() {
+		var res = window.location.pathname.split("/");
+		return res[2];
+	}
+	
+	function findObjectByKey(array, key, value) {
+		for (var i = 0; i < array.length; i++) {
+			if (array[i][key] === value) {
+				return true;
+			}
+		}
+		return false;
+	}
+	
+	function arr_diff (a1, a2) {
+		var a = [], diff = [];
+		for (var i = 0; i < a1.length; i++) {
+			a[a1[i]] = true;
+		}
+		for (var i = 0; i < a2.length; i++) {
+			if (a[a2[i]]) {
+				delete a[a2[i]];
+			} else {
+				a[a2[i]] = true;
+			}
+		}
+		for (var k in a) {
+			diff.push(k);
+		}
+		return diff;
+	}
+	
+	function createtablepayout()
+	{
+		var table = document.getElementById("mytable");
+		var header = table.createTHead();
+		var row = header.insertRow(0);
+		row.innerHTML = '<tr><th><span>Author</span></th>'+
+				'<th><span>Parent</span></th>'+
+				'<th><span>Post Link</span></th>'+
+				'<th><span>Pending Payout</span></th>'+
+				'<th><span>Your Expected Payout</span></th></tr>';
+	}
+	
+	function createtablefollow()
+	{
+		var table = document.getElementById("mytable");
+		var header = table.createTHead();
+		var row = header.insertRow(0);
+		row.innerHTML = '<tr><th><span>Username</span></th>'+'</tr>';
+	}
+	
+	function createtableinfo()
+	{
+		var table = document.getElementById("mytable");
+		var header = table.createTHead();
+		var row = header.insertRow(0);
+		row.innerHTML = '<tr><th><span>ID</span></th>'+
+				'<th><span>STEEM</span></th>'+
+				'<th><span>SBD</span></th>'+
+				'<th><span>Created Date</span></th>'+
+				'<th><span>Post</span></th>'+
+				'<th><span>Level</span></th></tr>';
+	}
+	
+	function deletetable()
+	{
+	    var table = document.getElementById("mytable");
+		var tableRows = table.getElementsByTagName('tr');
+		var rowCount = tableRows.length;
+		for (var x=rowCount-1; x>0; x--) {
+			try {
+				  table.removeChild(tableRows[x]);
+			}
+			catch(err) {
+			}
+		}
+		table.deleteTHead();
+	}
+</script>
+<div style="background: #fff;"> &copy; 2018 @odl</a></div>
+</body>
+</html>
