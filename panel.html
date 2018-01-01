@@ -63,9 +63,11 @@ window.scrollTo(0,1);
 	var FollowList = [];
 	var Informations = [];
 	var totalfollowers = 0;
+	
 	$(document).ready(function(){
-		var res = window.location.pathname.split("/");
-		name = res[2].replace('@','');
+		
+		var res = location.search.split('username=')[1];
+		name = res.replace('@','');
 		var info = document.getElementById('info');
 		var desc = document.getElementById('desc');
 		info.innerHTML = name + " Informations";
@@ -75,6 +77,8 @@ window.scrollTo(0,1);
 	
 	function GetInfo()
 	{
+		pendinglist.splice(0);
+		$("#totalvalue").html("");
 		deletetable();
 		createtableinfo();
 		setTimeout(function(){
